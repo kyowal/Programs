@@ -1,0 +1,31 @@
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script>
+function get_short_url(long_url, login, api_key, func)
+{
+    $.getJSON(
+        "http://api.bitly.com/v3/shorten?callback=?", 
+        { 
+            "format": "json",
+            "apiKey": api_key,
+            "login": login,
+            "longUrl": long_url
+        },
+        function(response)
+        {
+            func(response.data.url);
+        }
+    );
+}
+
+var login = "o_1p1q9v8jks";
+var api_key = "R_b82ffab2f1f14de981441d2bd9b717c1";
+var long_url = "https://ecomfe.github.io/echarts-examples/public/data/asset/data/aqi-beijing.json";
+
+get_short_url(long_url, login, api_key, function(short_url) {
+    console.log(short_url);
+});
+</script>
+</head>
+</html>
