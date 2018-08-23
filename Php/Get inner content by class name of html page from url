@@ -1,0 +1,12 @@
+<?php
+$html = file_get_contents('https://medium.com/s/story/how-do-we-stop-technology-addiction-c0c081b8c970');
+$doc = new DOMDocument();
+libxml_use_internal_errors(true);
+$doc->loadHTML($html);
+$finder = new DomXPath($doc);
+$node = $finder->query("//*[contains(@class, 'section-content')]");
+$html = $doc->saveHTML($node->item(0));
+$html = preg_replace('/(\>)\s*(\<)/m', '$1$2', $html);
+$html = strip_tags($html,"<p>");
+$html = preg_replace("/<p[^>]*?>/", '<p class="abc">', $html);
+echo $html;
