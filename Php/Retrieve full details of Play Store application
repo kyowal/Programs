@@ -1,0 +1,154 @@
+<?php
+ini_set('max_execution_time', 0);
+if(!class_exists('PlayStore')){
+	class PlayStore{
+		private $config;
+		private $db;
+		private $updatedApp;
+		private $OldApp;
+		public function __construct(){
+			require_once('/var/www/html/configuration.php');
+			$config = new JConfig();
+			$this->config = $config;
+			$this->db = $this->connect();
+			$this->updatedApp = $this->OldApp  = array();
+		}
+		
+		public function getApplist(){
+			$sql = "select * from pp_app";
+			$apps = $this->db->query($sql);
+			return $apps->fetch_all(MYSQLI_ASSOC);
+		}
+		
+		private function connect(){
+			return new mysqli($this->config->host, $this->config->user, $this->config->password , $this->config->db);
+		}
+
+		public function getUrl($package){
+			return "https://play.google.com/store/apps/details?id=" . $package;
+		}
+		
+		public function getAppData($url){
+			$html = $this->getHtml($url);
+			return $this->getContent($html['content']);
+		}
+
+		public function addForCsv($app){
+			$appdate = (isset($app['updated']))?date('Ymd', strtotime($app['updated'])) : false;
+			if($appdate != false && (date("Ymd", time() - 3600*24) == $appdate)){
+				array_push($this->updatedApp, $app);
+			}else{
+				array_push($this->OldApp, $app);
+			}
+		}
+		
+		public function createCsv(){
+			echo "<pre>New Updated<br>"; 
+			var_dump($this->updatedApp);
+			echo "<hr>Old Updated<br>"; 
+			var_dump($this->OldApp);
+		}
+		
+		
+		private function getHtml($url){
+			$user_agent='Mozilla/5.0 (Windows NT 6.1; rv:8.0) Gecko/20100101 Firefox/8.0';
+			$options = array(
+						CURLOPT_CUSTOMREQUEST  =>"GET",        //set request type post or get
+						CURLOPT_POST           =>false,        //set to GET
+						CURLOPT_USERAGENT      => $user_agent, //set user agent
+						CURLOPT_COOKIEFILE     =>"cookie.txt", //set cookie file
+						CURLOPT_COOKIEJAR      =>"cookie.txt", //set cookie jar
+						CURLOPT_RETURNTRANSFER => true,     // return web page
+						CURLOPT_HEADER         => false,    // don't return headers
+						CURLOPT_FOLLOWLOCATION => true,     // follow redirects
+						CURLOPT_ENCODING       => "",       // handle all encodings
+						CURLOPT_AUTOREFERER    => true,     // set referer on redirect
+						CURLOPT_CONNECTTIMEOUT => 120,      // timeout on connect
+						CURLOPT_TIMEOUT        => 120,      // timeout on response
+						CURLOPT_MAXREDIRS      => 10,       // stop after 10 redirects
+					);
+			$ch      = curl_init( $url );
+			curl_setopt_array( $ch, $options );
+			$content = curl_exec( $ch );
+			$err     = curl_errno( $ch );
+			$errmsg  = curl_error( $ch );
+			$header  = curl_getinfo( $ch );
+			curl_close( $ch );
+			$header['errno']   = $err;
+			$header['errmsg']  = $errmsg;
+			$header['content'] = $content;
+			return $header;
+		}
+		
+		private function getContent($html){
+			$content = array();
+			$content['appname'] = trim($this->returnSubHtml($html, "AHFaub" ));
+			$content['rating'] = trim($this->returnSubHtml($html, "BHMmbe" ));
+			$data = $this->returnSubHtml($html, "R8zArc", false);
+			$content['developer'] = trim($this->returnSubHtml($data[0], "hrTbp" ));
+			$content['subcategory'] = trim($this->returnSubHtml($data[1], "hrTbp" ));
+			$content['ratingcount'] = str_replace(" total","",$this->returnSubHtml($html, "EymY4b" ));
+			$cont = $this->returnSubHtml($html, "hAyfc", false );
+			$content['updated'] = (is_array($cont) && isset($cont[0]))? $this->returnSubHtml($cont[0], "htlgb") : 'Unknown';
+			$content['size'] = (is_array($cont) && isset($cont[1]))? $this->returnSubHtml($cont[1], "htlgb") : 'Unknown';
+			$content['installs'] = (is_array($cont) && isset($cont[2]))? $this->returnSubHtml($cont[2], "htlgb") : 'Unknown';
+			$content['version'] = (is_array($cont) && isset($cont[3]))? $this->returnSubHtml($cont[3], "htlgb") : 'Unknown';
+			$content['androidneed'] = (is_array($cont) && isset($cont[4]))? $this->returnSubHtml($cont[4], "htlgb") : 'Unknown';
+			$content['contentrating'] = (is_array($cont) && isset($cont[5]))? $this->returnSubHtml($cont[5], "htlgb") : 'Unknown';	
+			$content['contentrating'] = str_replace("Rated for ","",$content['contentrating']);
+			$content['contentrating'] = str_replace("Learn More","",$content['contentrating']);	
+			return $content;
+		}
+
+		private function returnSubHtml($html, $id, $singleNode=true, $bytagname=false, $byid=false ){
+			$identifier = ($byid == true) ? "(@id, '".$id."')" : "(@class, '".$id."')";
+			$doc = new DOMDocument();
+			libxml_use_internal_errors(true);
+			$doc->loadHTML($html);
+			$finder = new DomXPath($doc);
+			$node = $finder->query("//*[contains".$identifier."]");
+			if($singleNode == true){
+				if($bytagname == true){
+					$node = $doc->getElementsByTagName($id);			
+					$html = $doc->saveHTML($node->item(0));
+					$html = preg_replace('/(\>)\s*(\<)/m', '$1$2', $html);
+					return strip_tags($html);
+				}else{
+					$html = $doc->saveHTML($node->item(0));
+					$html = preg_replace('/(\>)\s*(\<)/m', '$1$2', $html);
+					$html = preg_replace('/\s+/', ' ', $html);
+					return strip_tags($html);									
+				}
+			}else{
+				if($bytagname == true){
+					$array = array();
+					$list = $doc->getElementsByTagName($id);
+					foreach($list as $row)
+						$array[] = $doc->saveHTML($row);
+					return $array;
+				}else{
+					$array = array();
+					foreach($node as $row)
+						$array[] = $doc->saveHTML($row);
+					return $array;	
+				}
+			}
+		}		
+	}
+}
+$googlePlay = new PlayStore();
+$apps = $googlePlay->getApplist();
+$count = 0;
+foreach($apps as $app){
+	set_time_limit(0);
+	$package = (isset($app['package_name']))? $app['package_name'] : false;
+	if($package != false){
+		$url = $googlePlay->getUrl($package);
+		$content = $googlePlay->getAppData($url);
+		$googlePlay->addForCsv($content);
+	}	
+}
+$googlePlay->createCsv();
+	
+
+
