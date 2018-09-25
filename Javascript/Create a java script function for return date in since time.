@@ -1,0 +1,95 @@
+<html>
+<head>
+<script>
+function getTime(date, dataTo) {
+  formats = {
+    past: [
+      { ceiling: 60, text: "$seconds seconds ago" },
+      { ceiling: 3600, text: "$minutes minutes ago" },
+      { ceiling: 86400, text: "$hours hours ago" },
+      { ceiling: 2629744, text: "$days days ago" },
+      { ceiling: 31556926, text: "$months months ago" },
+      { ceiling: null, text: "$years years ago" }      
+    ],
+    future: [
+      { ceiling: 60, text: "in $seconds seconds" },
+      { ceiling: 3600, text: "in $minutes minutes" },
+      { ceiling: 86400, text: "in $hours hours" },
+      { ceiling: 2629744, text: "in $days days" },
+      { ceiling: 31556926, text: "in $months months" },
+      { ceiling: null, text: "in $years years" }
+    ]
+  };
+  //Time units must be be ordered largest -> smallest
+  units = [ [31556926, 'years'], [2629744, 'months'], [86400, 'days'], [3600, 'hours'], [60, 'minutes'], [1, 'seconds'] ];
+  
+  date = new Date(date);
+  dataTo = dataTo ? new Date(dataTo) : new Date();
+  var seconds_difference = (dataTo - date) / 1000;
+  
+  var tense = 'past';
+  if (seconds_difference < 0) {
+    tense = 'future';
+    seconds_difference = 0-seconds_difference;
+  }
+  
+  function get_format() {
+    for (var i=0; i<formats[tense].length; i++) {
+      if (formats[tense][i].ceiling == null || seconds_difference <= formats[tense][i].ceiling) {
+        return formats[tense][i];
+      }
+    }
+    return null;
+  }
+  
+  function get_time_breakdown() {
+    var seconds = seconds_difference;
+    var breakdown = {};
+    for(var i=0; i<units.length; i++) {
+      var occurences_of_unit = Math.floor(seconds / units[i][0]);
+      seconds = seconds - (units[i][0] * occurences_of_unit);
+      breakdown[units[i][1]] = occurences_of_unit;
+    }
+    return breakdown;
+  }
+
+  function render_date(date_format) {
+    var breakdown = get_time_breakdown();
+    var time_ago_text = date_format.text.replace(/\$(\w+)/g, function() {
+      return breakdown[arguments[1]];
+    });
+    return depluralize_time_ago_text(time_ago_text, breakdown);
+  }
+  
+  function depluralize_time_ago_text(time_ago_text, breakdown) {
+    for(var i in breakdown) {
+      if (breakdown[i] == 1) {
+        var regexp = new RegExp("\\b"+i+"\\b");
+        time_ago_text = time_ago_text.replace(regexp, function() {
+          return arguments[0].replace(/s\b/g, '');
+        });
+      }
+    }
+    return time_ago_text;
+  }
+  
+  return render_date(get_format());
+}
+
+var dt = new Date();
+console.log(getTime(new Date(dt.getTime() - 1000)));
+console.log(getTime(new Date(dt.getTime() - (120 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (2*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (12*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (24*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (2*24*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (30*24*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (2*30*24*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (5*30*24*60 * 60 * 1000))));
+console.log(getTime(new Date(dt.getTime() - (23*12*31*24*60 * 60 * 1000))));
+</script>
+<head>
+<body>
+<div>Javascript Time Example</div>
+</body>
+</html>
