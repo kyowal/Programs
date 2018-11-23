@@ -1,0 +1,14 @@
+/** Function for copy the text which you want to **/
+function copy(text){ 
+	var input = document.createElement("input"); 
+	document.body.appendChild(input); 
+	input.setAttribute("id", "_inpid");
+	document.getElementById("_inpid").value=text;
+	input.select();
+	document.execCommand("copy");
+	document.body.removeChild(input);
+}
+
+/** Function call **/
+var text = Math.random();
+copy(text);
