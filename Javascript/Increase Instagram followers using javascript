@@ -1,34 +1,20 @@
-var i = scroll = 0;
-hit();
 function hit(){
 	var button = document.querySelector('button[class^="_0mzm-"]:not(._8A5w5)');
 	var docHeight = document.body.scrollHeight;
 	var nextintime = (Math.floor(Math.random() * 25000) + 5000);
 	if (typeof button != 'undefined' && button != null & button != 'null'){
-		scroll += 500;
-		scroll = (scroll > docHeight)? docHeight : scroll;
-		console.log("Scrol to Point: " + scroll);
-		window.scrollTo(0,scroll);
+		complete = 0;
 		button.click();
-		setTimeout(
-			function(){
-				console.log("Followed : " + ++i);
-				var currentPosition = (window.innerHeight + window.scrollY);
-				console.log("Position::::: Current:" + currentPosition + " :: docHeight :" + docHeight);
-				if (currentPosition >= docHeight){
-					var intop = scroll-100;
-					console.log("Scrol Back to: " + intop);
-					setTimeout(function(){
-						console.log("Scroled to: " + intop);
-						window.scrollTo(0,intop);
-					}, 2000);
-				}else{
-					console.log("No scroll problem");
-				}
-				hit();
-			}, nextintime);
+		console.log("Followed : " + ++i);
 	}else{
-		console.log("Going to Refresh");
-		location.reload();
+		if(complete == 1){
+			location.reload();
+		}else{
+			window.scrollTo(0,docHeight);
+			complete = 1;
+		}
 	}
+	setTimeout( hit, nextintime);
 }
+var i = complete = 0;
+setTimeout( hit, 10000);
